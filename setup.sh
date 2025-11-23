@@ -54,7 +54,6 @@ install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 echo "Installing Oh-My-Zsh..."
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
 rm -rf "$HOME/.oh-my-zsh" 2>/dev/null
-stow oh-my-zsh
 
 # Remove existing configs (no backup, no prompts)
 echo "Removing existing configs for stow..."
@@ -63,7 +62,7 @@ rm -rf "$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.config/nvim" "$HOME/.config/lazygi
 # Dotfiles setup
 echo "Setting up dotfiles..."
 cd ~
-REPO_URL="https://github.com/yourusername/your-dotfiles-repo"
+REPO_URL="https://github.com/hbabb/dotfiles.git"
 REPO_NAME="dotfiles"
 
 if ! command -v stow &> /dev/null; then
@@ -76,7 +75,7 @@ if [ ! -d "$REPO_NAME" ]; then
 fi
 
 cd "$REPO_NAME"
-stow bash git lazygit nvim zellij zsh starship
+stow bash git lazygit nvim zellij oh-my-zsh zsh starship
 
 # Set zsh as the default shell
 echo "Setting zsh as the default shell..."

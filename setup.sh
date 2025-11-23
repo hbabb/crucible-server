@@ -1,4 +1,6 @@
+
 #!/bin/bash
+set -e
 ORIGINAL_DIR=$(pwd)
 
 # Print the logo
@@ -10,80 +12,103 @@ print_logo() {
  / /___/ /  / /_/ / /__/ / /_/ / /  __/   Linux Server System Crafting Tool
  \____/_/   \__,_/\___/_/_.___/_/\___/   by: techsolvd
                                       courtesy of typecraft
-
 EOF
 }
-
 print_logo
 
-# Detect if running in LXC
+# Detect LXC
 if [ -f /.dockerenv ] || [ -f /run/.containerenv ]; then
-  echo "Running in LXC container. Adjusting setup..."
-  # Skip Docker/Kubernetes if unprivileged
-  if ! grep -q "lxc.aa_profile=unconfined" /proc/1/cgroup 2>/dev/null; then
-    echo "Unprivileged LXC detected. Skipping Docker/Kubernetes..."
-    export SKIP_DOCKER=true
-  fi
-  # Use rootless Docker if needed
-  if [ "$SKIP_DOCKER" != "true" ]; then
-    apt install -y uidmap dbus-user-session
-    dockerd-rootless-setuptool.sh install
-  fi
+    echo "Running in LXC..."
+    if ! grep -q "lxc.aa_profile=unconfined" /proc/1/cgroup 2>/dev/null; then
+        echo "Unprivileged LXC: skipping Docker/K8s"
+        SKIP_DOCKER=true
+    fi
+    if [ "$SKIP_DOCKER" != "true" ]; then
+        apt update && apt install -y uidmap dbus-user-session
+        dockerd-rootless-setuptool.sh install || true
+    fi
 fi
 
-source package.conf
+# Ensure package.conf is loaded
+SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
+if [ ! -f "$SCRIPT_DIR/package.conf" ]; then
+    echo "Error: package.conf not found in script directory."
+    exit 1
+fi
+source "$SCRIPT_DIR/package.conf"
 
-# Install system utilities
+# Update system
 apt update && apt upgrade -y
-apt install -y "${SYSTEM_UTILS[@]}" "${SYSTEM_UTILS_DEBIAN[@]}" "${DEV_TOOLS[@]}" "${SECURITY[@]}" "${WEB_DEV[@]}"
 
-# Enable services
-systemctl enable --now docker postgresql redis nginx ufw fail2ban
-ufw default deny incoming && ufw allow ssh && ufw --force enable
+# Install all packages from package.conf arrays
+apt install -y "${SYSTEM_UTILS[@]}" "${SYSTEM_UTILS_DEBIAN[@]}" \
+               "${DEV_TOOLS[@]}" "${DEV_TOOLS_DEBIAN[@]}" \
+               "${SECURITY[@]}" "${WEB_DEV[@]}"
+
+# Enable and start services safely
+for svc in docker postgresql redis-server nginx ufw fail2ban; do
+    if systemctl list-unit-files | grep -q "$svc"; then
+        systemctl enable --now "$svc" || true
+    fi
+done
+
+# Configure UFW
+if command -v ufw &> /dev/null; then
+    ufw default deny incoming
+    ufw allow ssh
+    ufw --force enable
+fi
 
 # Install asdf
-git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.14.0
-echo '. "$HOME/.asdf/asdf.sh"' >> ~/.bashrc
-echo '. "$HOME/.asdf/completions/asdf.bash"' >> ~/.bashrc
+if [ ! -d "$HOME/.asdf" ]; then
+    git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.14.0
+    echo '. "$HOME/.asdf/asdf.sh"' >> ~/.bashrc
+    echo '. "$HOME/.asdf/completions/asdf.bash"' >> ~/.bashrc
+fi
 
 # Install kubectl
-curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+if ! command -v kubectl &> /dev/null; then
+    curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+    install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+fi
 
-# Install Oh-My-Zsh
-echo "Installing Oh-My-Zsh..."
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
-rm -rf "$HOME/.oh-my-zsh" 2>/dev/null
+# Install Oh-My-Zsh if missing
+if [ ! -d "$HOME/.oh-my-zsh" ]; then
+    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+fi
 
-# Remove existing configs (no backup, no prompts)
-echo "Removing existing configs for stow..."
-rm -rf "$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.config/nvim" "$HOME/.config/lazygit" "$HOME/.zsh" "$HOME/.config/zellij" "$HOME/.config/starship.toml" "$HOME/.oh-my-zsh" 2>/dev/null
+# Remove old configs before stow
+rm -rf "$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.config/nvim" \
+       "$HOME/.config/lazygit" "$HOME/.zsh" "$HOME/.config/zellij" \
+       "$HOME/.config/starship.toml" 2>/dev/null
 
 # Dotfiles setup
-echo "Setting up dotfiles..."
 cd ~
 REPO_URL="https://github.com/hbabb/dotfiles.git"
 REPO_NAME="dotfiles"
 
 if ! command -v stow &> /dev/null; then
-  echo "Error: 'stow' is not installed. Install it first."
-  exit 1
+    echo "Error: 'stow' is not installed."
+    exit 1
 fi
 
 if [ ! -d "$REPO_NAME" ]; then
-  git clone "$REPO_URL" || { echo "Failed to clone dotfiles."; exit 1; }
+    git clone "$REPO_URL" || { echo "Failed to clone dotfiles."; exit 1; }
 fi
 
 cd "$REPO_NAME"
-stow bash git lazygit nvim zellij oh-my-zsh zsh starship
+stow bash git lazygit nvim zellij oh-my-zsh zsh starship || true
 
-# Set zsh as the default shell
-echo "Setting zsh as the default shell..."
-chsh -s $(which zsh)
+# Set zsh as default shell
+if [ "$(which zsh)" != "$SHELL" ]; then
+    chsh -s "$(which zsh)" || echo "Please change your shell manually."
+fi
 
-# Source .zshrc to apply changes
-echo "Sourcing .zshrc..."
-zsh -c "source ~/.zshrc"
+echo '. "$HOME/.asdf/asdf.sh"' >> ~/.zshrc
+echo '. "$HOME/.asdf/completions/asdf.bash"' >> ~/.zshrc
 
+echo '. "$HOME/.asdf/asdf.sh"' >> ~/.bashrc
+echo '. "$HOME/.asdf/completions/asdf.bash"' >> ~/.bashrc
+
+echo "Setup complete. Restart terminal or log out/in."
 cd "$ORIGINAL_DIR"
-echo "Setup complete. Please restart your terminal or log out and back in."

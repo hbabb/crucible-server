@@ -26,7 +26,13 @@ Automate the setup of Debian/Ubuntu servers for DevOps, web development, and sec
 Run the following command to bootstrap your server:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/hbabb/crucible-server/master/bootstrap.sh
+
+```
+
+bash <(curl -fsSL <https://raw.githubusercontent.com/hbabb/crucible-server/master/bootstrap.sh>)
+
+```
+
 ```
 
 ## **Manual Setup (Alternative)**

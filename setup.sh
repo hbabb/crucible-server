@@ -16,6 +16,21 @@ EOF
 
 print_logo
 
+# Detect if running in LXC
+if [ -f /.dockerenv ] || [ -f /run/.containerenv ]; then
+  echo "Running in LXC container. Adjusting setup..."
+  # Skip Docker/Kubernetes if unprivileged
+  if ! grep -q "lxc.aa_profile=unconfined" /proc/1/cgroup 2>/dev/null; then
+    echo "Unprivileged LXC detected. Skipping Docker/Kubernetes..."
+    export SKIP_DOCKER=true
+  fi
+  # Use rootless Docker if needed
+  if [ "$SKIP_DOCKER" != "true" ]; then
+    apt install -y uidmap dbus-user-session
+    dockerd-rootless-setuptool.sh install
+  fi
+fi
+
 source package.conf
 
 # Install system utilities

@@ -11,7 +11,7 @@ if [ ! -f "$SCRIPT_DIR/package.conf" ]; then
 fi
 
 # Load package.conf variables for script
-source "$SCRIPT_DIR/package.conf"
+source "$SCRIPT_DIR/packages.conf"
 
 # Print ASCII logo
 cat << "EOF"

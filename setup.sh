@@ -59,17 +59,9 @@ if [ "$IS_LXC" = false ]; then
 fi
 
 # Add Neovim PPA for latest verion (Lazyvim requirement)
-echo -e "${BLUE}Adding Neovim unstable repository...${NC}"
-echo "deb http://deb.debian.org/debian/ unstable main" > /etc/apt/sources.list.d/unstable.list
-cat > /etc/apt/preferences.d/99pin-unstable << 'EOF'
-Package: *
-Pin: release a=unstable
-Pin-Priority: 10
-
-Package: neovim
-Pin: release a=unstable
-Pin-Priority: 900
-EOF
+echo -e "${BLUE}Adding Neovim PPA...${NC}"
+apt install -y software-properties-common
+add-apt-repository -y ppa:neovim-ppa/unstable
 
 # Update and install
 echo -e "${BLUE}Installing packages...${NC}"

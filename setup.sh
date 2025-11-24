@@ -67,6 +67,7 @@ apt install -y "${PACKAGES[@]}"
 echo -e "${BLUE}Installing latest Neovim via AppImage...${NC}"
 curl -LO https://github.com/neovim/nvim/releases/latest/download/nvim.appimage
 chmod +x nvim.appimage
+mkdir -p /usr/local/bin/nvim
 mv nvim.appimage /user/local/bin/nvim
 
 # Enable services if install and not in LXC

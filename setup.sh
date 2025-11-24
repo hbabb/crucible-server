@@ -23,7 +23,7 @@ fi
 
 # Core packages - always installed
 CORE_PACKAGES=(
-  curl wget git zsh neovim stow fzf btop htop zellij bat
+  curl wget git zsh neovim stow fzf btop bat eza
 )
 
 # Optional packages - ask user
@@ -120,15 +120,12 @@ fi
 cd dotfiles
 
 # Remove existing configs to avoid stow confilicts
-rm -rf "$HOME/.bashrc" \
-       "$HOME/.zshrc" \
+rm -rf "$HOME/.zshrc" \
        "$HOME/.oh-my-zsh" \
-       "$HOME/.config/nvim" \
-       "$HOME/.config/zellij" \
-       "$HOME/.config/starship.toml" 2>/dev/null || true
+       "$HOME/.config/nvim" 2>/dev/null || true
 
 # Apply dotfiles using stow
-stow bash zsh oh-my-zsh zellij nvim starship 2>/dev/null || {
+stow zsh oh-my-zsh nvim 2>/dev/null || {
   echo "NOTE: Some dotfiles may already exist"
 }
 

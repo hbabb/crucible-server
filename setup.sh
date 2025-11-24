@@ -5,7 +5,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Verifiy package.conf exists
-if [ ! -f "$SCRIPT_DIR/package.conf" ]; then
+if [ ! -f "$SCRIPT_DIR/packages.conf" ]; then
   echo "Error: package.conf not found in $SCRIPT_DIR"
   exit 1
 fi

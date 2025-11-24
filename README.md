@@ -22,7 +22,7 @@ don't.
 **One-liner install:**
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/hbabb/crucible-server/main/bootstrap.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/hbabb/crucible-server/master/bootstrap.sh)
 ```
 
 The script will ask what you want installed:

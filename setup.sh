@@ -128,6 +128,10 @@ stow zsh oh-my-zsh nvim 2>/dev/null || {
   echo "NOTE: Some dotfiles may already exist"
 }
 
+# Setup oh-my-zsh plugins after stow
+git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
+git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
+
 # Try to set zsh as default (may require password)
 if [ "$EUID" -eq 0 ]; then
   chsh -s "$(which zsh)" || echo "NOTE: Run 'chsh -s \$(which zsh)' manually to set zsh as default"
@@ -135,13 +139,52 @@ else
   echo "Run 'chsh -s \$(which zsh)' to set zsh as default shell"
 fi
 
+# Setup SSH server for remote access
+echo -e "${BLUE}Configuring SSH server access...${NC}"
+apt install -y openssh-server
+systemctl enable --now ssh
+
+# Setup root access for SSH Login
+cat > /etc/ssh/sshd_config.d/99-root-login.conf << 'EOF'
+PermitRootLogin yes
+PasswordAuthentication yes
+KbdInteractiveAuthentication yes
+PubkeyAuthentication yes
+EOF
+
+systemctl restart sshd
+
+# Get IP Address
+IP_ADDRESS=$(ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v '127.0.0.1' | head -n1)
+
 echo ""
 echo -e "${GREEN}Setup complete!${NC}"
 echo ""
 echo "Installed packages: ${PACKAGES[*]}"
 echo ""
-echo "Next steps:"
-echo "  1. Exit and log back in (or run 'exec zsh')"
-echo "  2. Use ASDF to install language runtimes as needed"
-echo "  3. Check service status: systemctl status nginx"
+echo -e "${BLUE}SSH Access Setup:${NC}"
+echo "Server IP: ${IP_ADDRESS}"
+echo ""
+echo "From your PC, run these commands to setup SSH access:"
+echo ""
+echo " # Copy your SSH key to this server"
+echo " ssh-copy-id -i ~/.ssh/id_ed25519.pub root@${IP_ADDRESS} OR user@${IP_ADDRESS}"
+echo ""
+echo " # Add to your ~/.ssh/config (optional but recommended):"
+echo " Host debian"
+echo "     HostName ${IP_ADDRESS}"
+echo "     User root"
+echo "     IdentityFile ~/.ssh/id_ed25519"
+echo ""
+echo " # Then connect with:"
+echo " ssh debian"
+echo ""
+echo -e "${BLUE}Next steps:${NC}"
+echo " 1. Set up SSH access using commands above"
+echo " 2. SSH into the server (don't use pct enter for LXC)"
+echo " 3. Run 'exec zsh' to start using your new shell"
+echo " 4. Use ASDF to install language runtimes as needed"
+if [ "$IS_LXC" = false ]; then
+  echo " 5. Check service status: systemctl status nginx"
+fi
 echo ""

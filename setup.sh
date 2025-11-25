@@ -63,12 +63,18 @@ echo -e "${BLUE}Installing packages...${NC}"
 apt update -y
 apt install -y "${PACKAGES[@]}"
 
-# Install Neovim AppImage for latest version (LazyVim requirement)
-echo -e "${BLUE}Installing latest Neovim via AppImage...${NC}"
-curl -LO https://github.com/neovim/nvim/releases/latest/download/nvim.appimage
-chmod +x nvim.appimage
-mkdir -p /usr/local/bin/nvim
-mv nvim.appimage /usr/local/bin/nvim
+# Install latest Neovim for LazyVim
+echo -e "${BLUE}Installing latest Neovim via official tarball...${NC}"
+cd /tmp
+curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz
+tar xzf nvim-linux-x86_64.tar.gz
+# Move binaries to /usr/local
+cp -r nvim-linux-x86_64/bin/* /usr/local/bin/
+cp -r nvim-linux-x86_64/share/* /usr/local/share/
+cp -r nvim-linux-x86_64/lib/* /usr/local/lib/
+rm -rf nvim-linux-x86_64 nvim-linux-x86_64.tar.gz
+chmod +x /usr/local/bin/nvim
+echo -e "${GREEN}Neovim installed (latest)${NC}"
 
 # Enable services if install and not in LXC
 if [ "$IS_LXC" = false ]; then
